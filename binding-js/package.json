@@ -20,7 +20,7 @@
     "axios": "^0.14.0",
     "gulp": "^3.9.1",
     "gulp-shell": "^0.5.2",
-    "gulp-typescript": "^2.13.6",
+    "gulp-typescript": "^2.14.1",
     "typescript": "^1.8.10"
   },
   "dependencies": {
