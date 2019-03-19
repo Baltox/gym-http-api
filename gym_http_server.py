@@ -201,9 +201,7 @@ def env_create():
         used in future API calls to identify the environment to be
         manipulated
     """
-
-    print('v1/envssss')
-
+    
     env_id = get_required_param(request.get_json(), 'env_id')
     seed = get_optional_param(request.get_json(), 'seed', None)
     instance_id = envs.create(env_id, seed)
