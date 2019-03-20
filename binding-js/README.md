@@ -22,3 +22,10 @@ p.catch((error) => console.log("Error : " + error))
 ```
 
 After building the library, you can also run the example agent with `node dist/examples/exampleAgent.js`. 
+
+
+# Local
+python3 gym_http_server.py
+
+cd binding-js && php -S 127.0.0.1:8000 index.php
+http://localhost:8000/
