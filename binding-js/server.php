@@ -5,9 +5,14 @@ if( isset($_SERVER['PATH_INFO']) && substr( $_SERVER['PATH_INFO'], 0, 4 ) === "/
 
     $ch = curl_init();
 
+    $isPostRequest = $_SERVER['REQUEST_METHOD'] == 'POST';
+
     curl_setopt($ch, CURLOPT_URL,$url);
-    curl_setopt($ch, CURLOPT_POST, 1);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($_REQUEST));
+    curl_setopt($ch, CURLOPT_POST, $isPostRequest);
+
+    if($isPostRequest) {
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($_REQUEST));
+    }
 
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 
@@ -20,7 +25,7 @@ if( isset($_SERVER['PATH_INFO']) && substr( $_SERVER['PATH_INFO'], 0, 4 ) === "/
 
     curl_close ($ch);
 
-    var_dump($server_output, $url, $_REQUEST, http_build_query($_REQUEST));
+    echo $server_output;
 
     die();
 }
