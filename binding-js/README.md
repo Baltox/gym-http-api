@@ -27,5 +27,5 @@ After building the library, you can also run the example agent with `node dist/e
 # Local
 python3 gym_http_server.py
 
-cd binding-js && php -S 127.0.0.1:8000 index.php
+cd binding-js && php -S localhost:8000 index.php
 http://localhost:8000/
