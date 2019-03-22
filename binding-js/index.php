@@ -31,16 +31,38 @@
 
     function onEnvReseted(data)
     {
-        console.log(data);
+        var data = null;
+        while(data == null || data.done == false) {
+            var returnAjax = $.ajax({
+                type: "POST",
+                url: baseUrl+'/v1/envs/'+instanceId+'/step/',
+                datatype: "json",
+                data: {action: getRandomInt(2), render: true},
+                async: false
+            });
 
-        $.post(baseUrl+'/v1/envs/'+instanceId+'/step/', {action: 0, render: true}, onEnvSteped);
+            data = jQuery.parseJSON(returnAjax.responseText);
+
+            sleep(5);
+        }
     }
 
     function onEnvSteped(data)
     {
-        console.log(data);
-
         //$.post(baseUrl+'/v1/envs/'+instanceId+'/step/', {action: 1, render: true}, onEnvSteped);
+    }
+
+    function sleep(milliseconds) {
+        var start = new Date().getTime();
+        for (var i = 0; i < 1e7; i++) {
+            if ((new Date().getTime() - start) > milliseconds){
+                break;
+            }
+        }
+    }
+
+    function getRandomInt(max) {
+        return Math.floor(Math.random() * Math.floor(max));
     }
 
 

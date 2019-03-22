@@ -255,6 +255,9 @@ def env_step(instance_id):
     """
     json = request.get_json()
     action = get_required_param(json, 'action')
+
+    action = int(action)
+
     render = get_optional_param(json, 'render', False)
     [obs_jsonable, reward, done, info] = envs.step(instance_id, action, render)
     return jsonify(observation = obs_jsonable,
