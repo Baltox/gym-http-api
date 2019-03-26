@@ -7,6 +7,7 @@
   <body>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
     <script src="https://unpkg.com/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-vis"></script>
 
     <script>
 
@@ -14,6 +15,8 @@
     var baseUrl = "http://localhost:8000";
     var env = 'CartPole-v0';
 
+    var keyStorageModel = 'modelll-'+env;
+    train
     // Create the model
     // Input
     const input = tf.input({batchShape: [null, 4]});
@@ -22,7 +25,9 @@
     // Output layer
     const output = tf.layers.dense({useBias: true, units: 2, activation: 'linear'}).apply(layer);
     // Create the model
-    const model = tf.model({inputs: input, outputs: output});
+
+    var model = null;
+
     // Optimize
     let model_optimizer = tf.train.adam(0.01);
 
@@ -33,11 +38,19 @@
         });
     }
 
-    $( document ).ready(function() {
+    $( document ).ready(async function() {
+        try {
+            model = await tf.loadLayersModel('localstorage://' + keyStorageModel);
+            console.log('model loaded');
+        } catch (e) {
+            model = tf.model({inputs: input, outputs: output});
+            console.log('model created');
+        }
+
         train();
     });
 
-    function train() {
+    async function train() {
         let eps = 1.0;
         // Used to store the experiences
         let states = [];
@@ -53,7 +66,7 @@
 
         //TODO
         //for (let epi=0; epi < 150; epi++){
-        for (let epi=0; epi < 5; epi++){
+        for (let epi=0; epi < 10000; epi++) {
             let reward = 0;
             let step = 0;
 
@@ -61,7 +74,7 @@
 
             st = initialState.observation;
 
-            while (step < 400) {
+            while (step < 500) {
                 let act = pickAction(st, eps);
 
                 state = stepEnv(act);
@@ -105,13 +118,13 @@
                 console.log("rewards mean", mean(reward_mean));
                 console.log("episode", epi);
 
-                //await train_model(states, actions, rewards, next_states);
-                //await tf.nextFrame();
+                await train_model(states, actions, rewards, next_states);
+                await tf.nextFrame();
 
-                train_model(states, actions, rewards, next_states);
-                tf.nextFrame();
+                await model.save('localstorage://'+keyStorageModel);
             }
         }
+
 
     }
 
@@ -130,9 +143,11 @@
         const Qtargets = tf.tidy(() => {
             let Q_stp1 = model.predict(tf_next_states);
 
-            //TODO a revoir
-            let Qtargets = Q_stp1.max(1).expandDims(1).mul(tf.scalar(0.99)).add(tf_rewards).clone();
+            //TODO a revoir - corrigé en passant par dataSync()
             //let Qtargets = tf.tensor2d(Q_stp1.max(1).expandDims(1).mul(tf.scalar(0.99)).add(tf_rewards).buffer().values, shape=[size, 1]);
+            let QtargetsValues = Q_stp1.max(1).expandDims(1).mul(tf.scalar(0.99)).add(tf_rewards).dataSync();
+
+            let Qtargets = tf.tensor2d(Array.from(QtargetsValues), shape=[size, 1]);
 
             return Qtargets;
         });
@@ -148,10 +163,10 @@
             model_optimizer.minimize(() => {
                 const loss = model_loss(tf_states_b, tf_actions_b, Qtargets_b);
 
+                //TODO à revoir - corrigé en utilisant dataSync()
                 const values = loss.dataSync();
                 const arr = Array.from(values);
 
-                //TODO à revoir
                 //losses.push(loss.buffer().values[0]);
                 losses.push(arr[0]);
                 return loss;
@@ -226,8 +241,7 @@
     }
 
     function stepEnv(action) {
-        //TODO passer render a true
-        return ajax('POST', '/v1/envs/'+instanceId+'/step/', {action: action, render: false});
+        return ajax('POST', '/v1/envs/'+instanceId+'/step/', {action: action, render: true});
     }
 
     function ajax(type, url, data) {

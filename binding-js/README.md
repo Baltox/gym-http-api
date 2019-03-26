@@ -1,5 +1,15 @@
 # gym-http-api: JavaScript Binding
 
+## Local
+```
+python3 gym_http_server.py
+```
+
+```
+cd binding-js && php -S localhost:8000 index.php
+```
+
+Access : [http://localhost:8000](http://localhost:8000)
 
 ## Building
 
@@ -23,9 +33,3 @@ p.catch((error) => console.log("Error : " + error))
 
 After building the library, you can also run the example agent with `node dist/examples/exampleAgent.js`. 
 
-
-# Local
-python3 gym_http_server.py
-
-cd binding-js && php -S localhost:8000 index.php
-http://localhost:8000/
