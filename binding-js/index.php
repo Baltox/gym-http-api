@@ -20,11 +20,18 @@
     // Hidden layer
     const layer = tf.layers.dense({useBias: true, units: 32, activation: 'relu'}).apply(input);
     // Output layer
-    const output = tf.layers.dense({useBias: true, units: 3, activation: 'linear'}).apply(layer);
+    const output = tf.layers.dense({useBias: true, units: 2, activation: 'linear'}).apply(layer);
     // Create the model
     const model = tf.model({inputs: input, outputs: output});
     // Optimize
     let model_optimizer = tf.train.adam(0.01);
+
+    // Loss of the model
+    function model_loss(tf_states, tf_actions, Qtargets){
+        return tf.tidy(() => {
+            return model.predict(tf_states).sub(Qtargets).square().mul(tf_actions).mean();
+        });
+    }
 
     $( document ).ready(function() {
         train();
@@ -98,15 +105,71 @@
                 console.log("rewards mean", mean(reward_mean));
                 console.log("episode", epi);
 
-                //TODO à finir
                 //await train_model(states, actions, rewards, next_states);
                 //await tf.nextFrame();
+
+                train_model(states, actions, rewards, next_states);
+                tf.nextFrame();
             }
         }
 
     }
-    
-    
+
+    // Train the model
+    function train_model(states, actions, rewards, next_states){
+        var size = next_states.length;
+        // Transform each array into a tensor
+        let tf_states = tf.tensor2d(states, shape=[states.length, 4]);
+        let tf_rewards = tf.tensor2d(rewards, shape=[rewards.length, 1]);
+        let tf_next_states = tf.tensor2d(next_states, shape=[next_states.length, 4]);
+        let tf_actions = tf.tensor2d(actions, shape=[actions.length, 2]);
+        // Get the list of loss to compute the mean later in this function
+        let losses = []
+        // Get the QTargets
+
+        const Qtargets = tf.tidy(() => {
+            let Q_stp1 = model.predict(tf_next_states);
+
+            //TODO a revoir
+            let Qtargets = Q_stp1.max(1).expandDims(1).mul(tf.scalar(0.99)).add(tf_rewards).clone();
+            //let Qtargets = tf.tensor2d(Q_stp1.max(1).expandDims(1).mul(tf.scalar(0.99)).add(tf_rewards).buffer().values, shape=[size, 1]);
+
+            return Qtargets;
+        });
+        // Generate batch of training and train the model
+        let batch_size = 32;
+        for (var b = 0; b < size; b+=32) {
+            // Select the batch
+            let to = (b + batch_size < size) ?  batch_size  : (size - b);
+            const tf_states_b = tf_states.slice(b, to);
+            const tf_actions_b = tf_actions.slice(b, to);
+            const Qtargets_b = Qtargets.slice(b, to);
+            // Minimize the error
+            model_optimizer.minimize(() => {
+                const loss = model_loss(tf_states_b, tf_actions_b, Qtargets_b);
+
+                const values = loss.dataSync();
+                const arr = Array.from(values);
+
+                //TODO à revoir
+                //losses.push(loss.buffer().values[0]);
+                losses.push(arr[0]);
+                return loss;
+            });
+            // Dispose the tensors from the memory
+            tf_states_b.dispose();
+            tf_actions_b.dispose();
+            Qtargets_b.dispose();
+        }
+        console.log("Mean loss", mean(losses));
+        // Dispose the tensors from the memory
+        Qtargets.dispose();
+        tf_states.dispose();
+        tf_rewards.dispose();
+        tf_next_states.dispose();
+        tf_actions.dispose();
+    }
+
     function pickAction(st, eps) {
         let st_tensor = tf.tensor([st]);
         let act;
