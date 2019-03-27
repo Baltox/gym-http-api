@@ -16,7 +16,12 @@
     var env = 'CartPole-v0';
 
     var keyStorageModel = 'modelll-'+env;
-    train
+
+    var tfVisLossesHistory = {};
+
+    // Get a surface
+    const surface = tfvis.visor().surface({ name: 'Barchart', tab: 'Charts' });
+
     // Create the model
     // Input
     const input = tf.input({batchShape: [null, 4]});
@@ -66,7 +71,7 @@
 
         //TODO
         //for (let epi=0; epi < 150; epi++){
-        for (let epi=0; epi < 10000; epi++) {
+        for (let epi=0; epi < 5; epi++) {
             let reward = 0;
             let step = 0;
 
@@ -176,6 +181,18 @@
             tf_actions_b.dispose();
             Qtargets_b.dispose();
         }
+
+        tfVisLossesHistory.push(mean(losses));
+
+        var tfVisLossesData = tfVisLossesHistory.map(
+            function(loss, index) {
+                return { index: index, value: loss};
+            }
+        );
+
+        // Render a barchart on that surface
+        tfvis.render.barchart(surface, tfVisLossesData, {});
+
         console.log("Mean loss", mean(losses));
         // Dispose the tensors from the memory
         Qtargets.dispose();
