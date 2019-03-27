@@ -13,14 +13,16 @@
 
     var instanceId;
     var baseUrl = "http://localhost:8000";
-    var env = 'CartPole-v0';
+    var env = 'CartPole-v1';
 
-    var keyStorageModel = 'modelll-'+env;
+    var keyStorageModel = 'model-'+env;
 
-    var tfVisLossesHistory = {};
+    var tfVisLossesHistory = [];
+    var tfVisRewardHistory = [];
 
     // Get a surface
-    const surface = tfvis.visor().surface({ name: 'Barchart', tab: 'Charts' });
+    const surfaceLosses = tfvis.visor().surface({ name: 'Losses', tab: 'Charts' });
+    const surfaceRewards = tfvis.visor().surface({ name: 'Rewards', tab: 'Charts' });
 
     // Create the model
     // Input
@@ -45,7 +47,8 @@
 
     $( document ).ready(async function() {
         try {
-            model = await tf.loadLayersModel('localstorage://' + keyStorageModel);
+            //model = await tf.loadLayersModel('localstorage://' + keyStorageModel);
+            model = tf.model({inputs: input, outputs: output});
             console.log('model loaded');
         } catch (e) {
             model = tf.model({inputs: input, outputs: output});
@@ -82,11 +85,11 @@
             while (step < 500) {
                 let act = pickAction(st, eps);
 
-                state = stepEnv(act);
+                state2 = stepEnv(act);
 
-                reward = (state.done == false ? 1 : -1);
+                reward = (state2.done == false ? 1 : -1);
 
-                st2 = state.observation;
+                st2 = state2.observation;
 
                 let mask = [0, 0];
                 mask[act] = 1;
@@ -98,6 +101,13 @@
                 reward_mean.splice(index, 0, reward)
                 next_states.splice(index, 0, st2);
                 actions.splice(index, 0, mask);
+
+
+
+                if(reward == -1) {
+                    console.log('a', st, st2, act, mask, state2, 'b');
+                }
+
                 // Be sure to keep the size of the dataset under 10000 transitions
                 if (states.length > 10000){
                     states = states.slice(1, states.length);
@@ -109,8 +119,11 @@
                 st = st2;
                 step += 1;
 
+                //TODO
+                console.log('step : '+ step);
+
                 //Boucle de fin
-                if(state.done) {
+                if(state2.done) {
                     break;
                 }
             }
@@ -123,10 +136,12 @@
                 console.log("rewards mean", mean(reward_mean));
                 console.log("episode", epi);
 
+                updateTfVis(null, mean(reward_mean));
+
                 await train_model(states, actions, rewards, next_states);
                 await tf.nextFrame();
 
-                await model.save('localstorage://'+keyStorageModel);
+                //await model.save('localstorage://'+keyStorageModel);
             }
         }
 
@@ -182,16 +197,7 @@
             Qtargets_b.dispose();
         }
 
-        tfVisLossesHistory.push(mean(losses));
-
-        var tfVisLossesData = tfVisLossesHistory.map(
-            function(loss, index) {
-                return { index: index, value: loss};
-            }
-        );
-
-        // Render a barchart on that surface
-        tfvis.render.barchart(surface, tfVisLossesData, {});
+        updateTfVis(mean(losses), null);
 
         console.log("Mean loss", mean(losses));
         // Dispose the tensors from the memory
@@ -224,6 +230,33 @@
         }
         st_tensor.dispose();
         return act;
+    }
+
+    function updateTfVis(losses, rewards)
+    {
+        if(losses != null) {
+            tfVisLossesHistory.push(losses);
+        }
+
+        if(rewards != null) {
+            tfVisRewardHistory.push(rewards);
+        }
+
+        var tfVisLossesData = tfVisLossesHistory.map(
+            function(loss, index) {
+                return { x: index, y: loss};
+            }
+        );
+
+        var tfVisRewardData = tfVisRewardHistory.map(
+            function(reward, index) {
+                return { x: index, y: reward};
+            }
+        );
+
+        //Render charts
+        tfvis.render.linechart(surfaceLosses, {values: [tfVisLossesData], series: ['Loss']});
+        tfvis.render.linechart(surfaceRewards, {values: [tfVisRewardData], series: ['Rewards']});
     }
 
     function mean(array){
