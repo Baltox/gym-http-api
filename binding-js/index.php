@@ -28,12 +28,16 @@
     // Input
     const input = tf.input({batchShape: [null, 4]});
     // Hidden layer
-    const layer = tf.layers.dense({useBias: true, units: 32, activation: 'relu'}).apply(input);
+    const firstLayer = tf.layers.dense({useBias: true, units: 128, activation: 'relu'}).apply(input);
+
+    const secondLayer = tf.layers.dense({useBias: true, units: 32, activation: 'relu'}).apply(firstLayer);
+
     // Output layer
-    const output = tf.layers.dense({useBias: true, units: 2, activation: 'linear'}).apply(layer);
+    const output = tf.layers.dense({useBias: true, units: 2, activation: 'linear'}).apply(secondLayer);
     // Create the model
 
-    var model = null;
+    //var model = null;
+    const model = tf.model({inputs: input, outputs: output});
 
     // Optimize
     let model_optimizer = tf.train.adam(0.01);
@@ -46,6 +50,7 @@
     }
 
     $( document ).ready(async function() {
+        /*
         try {
             //model = await tf.loadLayersModel('localstorage://' + keyStorageModel);
             model = tf.model({inputs: input, outputs: output});
@@ -54,6 +59,7 @@
             model = tf.model({inputs: input, outputs: output});
             console.log('model created');
         }
+        */
 
         train();
     });
@@ -74,7 +80,7 @@
 
         //TODO
         //for (let epi=0; epi < 150; epi++){
-        for (let epi=0; epi < 5; epi++) {
+        for (let epi=0; epi < 500; epi++) {
             let reward = 0;
             let step = 0;
 
